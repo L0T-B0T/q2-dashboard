@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Q2 2026 — Profit Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f14;
+      --surface: #161b27;
+      --surface2: #1e2535;
+      --border: #2a3347;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.15);
+      --green: #22c55e;
+      --yellow: #f59e0b;
+      --red: #ef4444;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+      --gold: #fbbf24;
+      --silver: #94a3b8;
+      --bronze: #d97706;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      height: 100vh;
+      overflow: hidden;
+      max-width: 100vw;
+    }
+
+    /* ── Full-screen grid layout ─────────────────────────── */
+    .dashboard {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      height: 100vh;
+      padding: 0;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .header-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ── Content grid ────────────────────────────────────── */
+    .content {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* ── Top row: profit card + KPIs + hero bundles ─────── */
+    .top-row {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: minmax(200px, 1.8fr) repeat(3, minmax(80px, 0.55fr)) minmax(260px, 1.6fr);
+      gap: 6px;
+      align-items: stretch;
+      max-width: 100vw;
+      overflow: hidden;
+    }
+
+    .card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    /* Big number */
+    .big-number-section { padding: 4px 0 10px; }
+
+    .big-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .big-number {
+      font-size: 38px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .big-number .cents {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+
+    .big-target {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .big-target span { color: var(--text-dim); font-weight: 500; }
+
+    /* Progress bar */
+    .progress-wrap { margin-top: 4px; }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .progress-pct {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .progress-fraction {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .progress-track {
+      background: var(--surface2);
+      border-radius: 100px;
+      height: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, #2563eb 0%, #3b82f6 60%, #60a5fa 100%);
+      box-shadow: 0 0 10px rgba(59,130,246,0.4);
+      transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .progress-days {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Status strip */
+    .status-strip {
+      margin-top: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .status-label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .status-value {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .status-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* KPI cards */
+    .kpi-card { padding: 10px 12px; }
+
+    .kpi-label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .kpi-value {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .kpi-value.green { color: var(--green); }
+    .kpi-value.red { color: var(--red); }
+    .kpi-value.yellow { color: var(--yellow); }
+    .kpi-value.accent { color: var(--accent); }
+
+    .kpi-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── Hero Bundles Card ───────────────────────────────── */
+    .hero-bundles-card {
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .hero-bundles-title {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .hero-bundle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(42, 51, 71, 0.4);
+    }
+
+    .hero-bundle-row:last-child { border-bottom: none; }
+
+    .hero-rank {
+      font-size: 16px;
+      font-weight: 800;
+      width: 24px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .hero-rank.rank-1 { color: var(--gold); }
+    .hero-rank.rank-2 { color: var(--silver); }
+    .hero-rank.rank-3 { color: var(--bronze); }
+
+    .hero-bundle-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .hero-bundle-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hero-bundle-profit {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--green);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ── Bottom sections row ─────────────────────────────── */
+    .bottom-sections {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      max-width: 100vw;
+    }
+
+    .placeholder-content {
+      text-align: center;
+      padding: 16px 12px;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-style: italic;
+    }
+
+    .section-title {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    /* ── Chart panel ─────────────────────────────────────── */
+    .chart-panel {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .chart-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .chart-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .chart-legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    .chart-container {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+    }
+
+    /* ── Loading / Error ────────────────────────────────── */
+    .loading-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="dashboard">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-dot"></div>
+      <div class="header-title">Q2 2026 &mdash; Profit Tracker</div>
+    </div>
+    <div class="header-right">
+      <span>⟳ Auto-refresh 5m</span>
+      <span id="lastUpdated">Updating…</span>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Top: Profit card + KPIs + Hero Bundles -->
+    <div class="top-row">
+
+      <!-- Main profit card -->
+      <div class="card">
+        <div class="big-number-section">
+          <div class="big-label">Q2 Profit — YTD</div>
+          <div class="big-number" id="heroTotal">—</div>
+          <div class="big-target">Target: <span>$110,000</span></div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            <div class="progress-pct" id="progressPct">0%</div>
+            <div class="progress-fraction" id="progressFraction">$0 / $110,000</div>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+          </div>
+          <div class="progress-days">
+            <span id="daysElapsed">0 days elapsed</span>
+            <span id="daysRemaining">0 days left</span>
+          </div>
+        </div>
+        <div class="status-strip">
+          <div class="status-label">Projected End-of-Q2</div>
+          <div class="status-value" id="projectedTotal">—</div>
+          <div class="status-sub" id="projectedSub">loading…</div>
+        </div>
+      </div>
+
+      <!-- KPI: Today's Profit -->
+      <div class="card kpi-card">
+        <div class="kpi-label">Today's Profit</div>
+        <div class="kpi-value green" id="todayProfit">—</div>
+        <div class="kpi-sub">Live</div>
+      </div>
+
+      <!-- KPI: Needed / Day -->
+      <div class="card kpi-card">
+        <div class="kpi-label">Needed / Day</div>
+        <div class="kpi-value yellow" id="neededDaily">—</div>
+        <div class="kpi-sub">To hit $110K</div>
+      </div>
+
+      <!-- KPI: Daily Avg -->
+      <div class="card kpi-card">
+        <div class="kpi-label">Daily Average</div>
+        <div class="kpi-value accent" id="dailyAvg">—</div>
+        <div class="kpi-sub">Q2 so far</div>
+      </div>
+
+      <!-- Hero: Top 3 Bundles -->
+      <div class="card hero-bundles-card">
+        <div class="hero-bundles-title">🏆 Top Bundles by Profit</div>
+        <div id="heroBundles">
+          <div class="loading-state"><div class="spinner"></div> Loading…</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Learnings + Health Score placeholders -->
+    <div class="bottom-sections">
+      <div class="card">
+        <div class="section-title">📚 Learnings & Insights</div>
+        <div class="placeholder-content">Confluence integration coming soon</div>
+      </div>
+      <div class="card">
+        <div class="section-title">🏥 Campaign Health Score</div>
+        <div class="placeholder-content">Health score integration coming soon</div>
+      </div>
+    </div>
+
+    <!-- Bottom: Chart -->
+    <div class="chart-panel">
+      <div class="chart-header">
+        <div class="chart-title">Daily Profit — Q2 2026</div>
+        <div class="chart-legend">
+          <div class="chart-legend-item">
+            <div class="chart-legend-dot" style="background: #22c55e;"></div>
+            Profit
+          </div>
+          <div class="chart-legend-item">
+            <div class="chart-legend-dot" style="background: rgba(59,130,246,0.5);"></div>
+            Cumulative
+          </div>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── Utilities ──────────────────────────────────────────
+  const TARGET = 110000;
+
+  function fmt(n, decimals = 0) {
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    const abs = Math.abs(n);
+    const formatted = abs.toLocaleString('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+    return (n < 0 ? '-' : '') + '$' + formatted;
+  }
+
+  function fmtK(n) {
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    if (Math.abs(n) >= 1000) {
+      return (n < 0 ? '-$' : '$') + (Math.abs(n) / 1000).toFixed(1) + 'K';
+    }
+    return fmt(n);
+  }
+
+  function fmtHero(n) {
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    const dollars = Math.floor(Math.abs(n));
+    const cents = Math.round((Math.abs(n) - dollars) * 100);
+    const prefix = n < 0 ? '-$' : '$';
+    const dollarsStr = dollars.toLocaleString('en-US');
+    return `${prefix}${dollarsStr}<span class="cents">.${String(cents).padStart(2, '0')}</span>`;
+  }
+
+  function setEl(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  }
+
+  // ── Chart Setup ────────────────────────────────────────
+  let chartInstance = null;
+
+  function initChart() {
+    const ctx = document.getElementById('dailyChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
+      data: {
+        labels: [],
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Daily Profit',
+            data: [],
+            backgroundColor: (ctx) => {
+              const val = ctx.raw;
+              return val >= 0
+                ? 'rgba(34, 197, 94, 0.75)'
+                : 'rgba(239, 68, 68, 0.75)';
+            },
+            borderColor: (ctx) => {
+              const val = ctx.raw;
+              return val >= 0
+                ? 'rgba(34, 197, 94, 1)'
+                : 'rgba(239, 68, 68, 1)';
+            },
+            borderWidth: 1,
+            borderRadius: 3,
+            borderSkipped: false,
+            order: 2,
+            yAxisID: 'y',
+          },
+          {
+            type: 'line',
+            label: 'Cumulative',
+            data: [],
+            borderColor: 'rgba(59, 130, 246, 0.8)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            fill: true,
+            tension: 0.3,
+            order: 1,
+            yAxisID: 'y1',
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 600, easing: 'easeOutQuart' },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#1e2535',
+            borderColor: '#2a3347',
+            borderWidth: 1,
+            titleColor: '#94a3b8',
+            bodyColor: '#e2e8f0',
+            titleFont: { size: 11 },
+            bodyFont: { size: 12, weight: '500' },
+            padding: 10,
+            callbacks: {
+              title: (items) => {
+                const label = items[0]?.label || '';
+                const d = new Date(label + 'T00:00:00');
+                return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+              },
+              label: (ctx) => `${ctx.dataset.label}: ${fmt(ctx.raw, 2)}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(42,51,71,0.4)', drawTicks: false },
+            border: { display: false },
+            ticks: {
+              color: '#64748b',
+              font: { size: 9 },
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 20,
+              callback: function(val) {
+                const label = this.getLabelForValue(val);
+                const d = new Date(label + 'T00:00:00');
+                return `${d.getMonth()+1}/${d.getDate()}`;
+              },
+            },
+          },
+          y: {
+            position: 'left',
+            grid: { color: 'rgba(42,51,71,0.4)', drawTicks: false },
+            border: { display: false },
+            ticks: {
+              color: '#64748b',
+              font: { size: 10 },
+              callback: val => fmtK(val),
+            },
+          },
+          y1: {
+            position: 'right',
+            grid: { display: false },
+            border: { display: false },
+            ticks: {
+              color: '#3b82f6',
+              font: { size: 10 },
+              callback: val => fmtK(val),
+            },
+          },
+        },
+      },
+    });
+  }
+
+  // ── Bundle name cleanup ─────────────────────────────────
+  function cleanBundleName(raw) {
+    // "barcelona.wonder.zenhole_retargeting_Android" → "barcelona.wonder.zenhole"
+    // "6756888081_retargeting_iOS" → "6756888081"
+    let name = raw;
+    name = name.replace(/_retargeting_(Android|iOS)$/i, '');
+    name = name.replace(/_Android$|_iOS$/i, '');
+    return name;
+  }
+
+  // ── Render bundles ─────────────────────────────────────
+  function renderBundles(bundles) {
+    if (!bundles || bundles.length === 0) {
+      return '<span style="color:var(--text-muted); font-size:11px;">No data yet</span>';
+    }
+    const rankColors = ['rank-1', 'rank-2', 'rank-3'];
+    const medals = ['1', '2', '3'];
+    return bundles.map((b, i) => `
+      <div class="hero-bundle-row">
+        <div class="hero-rank ${rankColors[i]}">${medals[i]}</div>
+        <div class="hero-bundle-info">
+          <div class="hero-bundle-name" title="${b.name}">${cleanBundleName(b.name)}</div>
+        </div>
+        <div class="hero-bundle-profit">${fmtK(b.profit)}</div>
+      </div>
+    `).join('');
+  }
+
+  // ── Data Fetching ──────────────────────────────────────
+  async function refreshAll() {
+    try {
+      const res = await fetch('/api/profit');
+      const d = await res.json();
+
+      if (d.error) {
+        console.error('API error:', d.message);
+        return;
+      }
+
+      const { totalProfit, dailyData, topBundles, pacing } = d;
+
+      // Big number
+      setEl('heroTotal', fmtHero(totalProfit));
+
+      // Progress
+      const pct = Math.min(100, Math.max(0, (totalProfit / TARGET) * 100));
+      document.getElementById('progressFill').style.width = pct + '%';
+      setEl('progressPct', pct.toFixed(1) + '%');
+      setEl('progressFraction', `${fmt(totalProfit, 0)} / $110,000`);
+      setEl('daysElapsed', `${pacing.daysElapsed}d elapsed`);
+      setEl('daysRemaining', `${pacing.daysRemaining}d left`);
+
+      // Projected
+      const projected = pacing.dailyRate * 91;
+      const projColor = projected >= TARGET ? 'var(--green)' : projected >= TARGET * 0.8 ? 'var(--yellow)' : 'var(--red)';
+      const projEl = document.getElementById('projectedTotal');
+      projEl.style.color = projColor;
+      setEl('projectedTotal', fmt(projected, 0));
+
+      const statusEmoji = projected >= TARGET ? '🟢' : projected >= TARGET * 0.8 ? '🟡' : '🔴';
+      const statusText = projected >= TARGET ? 'On Track' : projected >= TARGET * 0.8 ? 'Behind Pace' : 'At Risk';
+      setEl('projectedSub', `${statusEmoji} ${statusText} · ${fmt(pacing.dailyRate, 0)}/day avg`);
+
+      // Today's profit (last entry in daily data)
+      const today = dailyData.length > 0 ? dailyData[dailyData.length - 1] : null;
+      if (today) {
+        const todayClass = today.profit >= 0 ? 'green' : 'red';
+        document.getElementById('todayProfit').className = `kpi-value ${todayClass}`;
+        setEl('todayProfit', fmt(today.profit, 0));
+      }
+
+      // Needed / day
+      setEl('neededDaily', fmt(pacing.requiredRate, 0));
+
+      // Daily avg
+      setEl('dailyAvg', fmt(pacing.dailyRate, 0));
+
+      // Hero bundles
+      setEl('heroBundles', renderBundles(topBundles));
+
+      // Chart
+      if (!chartInstance) initChart();
+      // Normalize dates — BI2 may return full date strings or YYYY-MM-DD
+      const normalized = dailyData.map(r => {
+        let d = r.date;
+        if (d && d.includes(',')) {
+          try { d = new Date(d).toISOString().slice(0, 10); } catch {}
+        }
+        return { date: d, profit: r.profit };
+      }).sort((a, b) => a.date.localeCompare(b.date));
+
+      const labels = normalized.map(r => r.date);
+      const profits = normalized.map(r => r.profit);
+
+      // Cumulative
+      let cum = 0;
+      const cumulative = profits.map(p => { cum += p; return cum; });
+
+      chartInstance.data.labels = labels;
+      chartInstance.data.datasets[0].data = profits;
+      chartInstance.data.datasets[1].data = cumulative;
+      chartInstance.update();
+
+      // Timestamp
+      const now = new Date();
+      const t = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      setEl('lastUpdated', `Updated ${t}`);
+
+    } catch (e) {
+      console.error('Refresh error:', e);
+    }
+  }
+
+  // ── Init ───────────────────────────────────────────────
+  initChart();
+  refreshAll();
+  setInterval(refreshAll, 5 * 60 * 1000);
+</script>
+</body>
+</html>
